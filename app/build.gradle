@@ -19,3 +19,22 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 }
+
+def generatedSudokuAssets = layout.buildDirectory.dir('generated/sudokuAssets')
+
+tasks.register('generateSudokuAssets') {
+    inputs.files(fileTree('src/main/html-parts'))
+    outputs.dir(generatedSudokuAssets)
+
+    doLast {
+        def outDir = generatedSudokuAssets.get().asFile
+        outDir.mkdirs()
+        def encoded = (1..5).collect { n ->
+            file("src/main/html-parts/index.part${n}.b64").getText('UTF-8').trim()
+        }.join('')
+        new File(outDir, 'index.html').bytes = java.util.Base64.getDecoder().decode(encoded)
+    }
+}
+
+android.sourceSets.main.assets.srcDir(generatedSudokuAssets)
+tasks.named('preBuild').configure { dependsOn('generateSudokuAssets') }
