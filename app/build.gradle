@@ -21,6 +21,7 @@ android {
 }
 
 def generatedSudokuAssets = layout.buildDirectory.dir('generated/sudokuAssets')
+def expectedHtmlSha256 = 'ccbaed20a2784873aacf548e35a12a58b70bcdeb2273d16aa14e739162a11226'
 
 tasks.register('generateSudokuAssets') {
     inputs.files(fileTree('src/main/html-parts'))
@@ -32,7 +33,15 @@ tasks.register('generateSudokuAssets') {
         def encoded = (1..5).collect { n ->
             file("src/main/html-parts/index.part${n}.b64").getText('UTF-8').trim()
         }.join('')
-        new File(outDir, 'index.html').bytes = java.util.Base64.getDecoder().decode(encoded)
+        def htmlBytes = java.util.Base64.getDecoder().decode(encoded)
+        def actualSha = java.security.MessageDigest.getInstance('SHA-256')
+            .digest(htmlBytes)
+            .collect { String.format('%02x', it & 0xff) }
+            .join('')
+        if (actualSha != expectedHtmlSha256) {
+            throw new GradleException("Sudoku HTML checksum mismatch: ${actualSha}")
+        }
+        new File(outDir, 'index.html').bytes = htmlBytes
     }
 }
 
